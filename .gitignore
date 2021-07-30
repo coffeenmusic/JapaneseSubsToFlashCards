@@ -1,0 +1,4 @@
+*.apkg
+*.srt
+*.txt
+/.ipynb_checkpoints

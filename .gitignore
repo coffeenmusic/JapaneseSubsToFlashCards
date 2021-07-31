@@ -1,3 +1,4 @@
 *.apkg
 *.srt
 /.ipynb_checkpoints
+/Ignore_Lists/previous_export_words.txt

@@ -16,7 +16,7 @@ Download a japanese subtitle file. This tool will parse that file and give you t
 # Dependencies
 - fugashi - package for japanese language tokenization (I'm using it to break the corpus in to separate words)
 - jisho-py - package creates a python api to jisho.org japanese dictionary and returns results with japanese kanji & kana as well as english translations
-Note: jisho-py currently must be copied to the site-packages directory because it's pip installation is broken. Just import a package like import numpy as np, then print(np.__file__) to get the site-packages location
+Note: jisho-py currently must be copied to the site-packages directory because it's pip installation is broken. Just import a package like import numpy as np, then `print(np.__file__)` to get the site-packages location
 - genanki - package for generating anki decks
 
 # Usage

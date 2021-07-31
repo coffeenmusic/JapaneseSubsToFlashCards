@@ -152,6 +152,7 @@ for sub_idx, sub_file in enumerate(sub_files):
 
     add_cnt = 0
     words_added = []
+    skipped = []
     for word, _ in word_counts.most_common():
         word_no_kana = word.split()[0] # Ignore kana. Get just 俺 instead of 俺 (オレ)
 
@@ -160,11 +161,13 @@ for sub_idx, sub_file in enumerate(sub_files):
             answers = jisho.search(quote(word_no_kana))
             if type(answers) != list:
                 unk_word = True
-            words_added += [word_no_kana]
+            else:
+                words_added += [word_no_kana]
         except:
-            unk_word = True
+            unk_word = True            
 
         if unk_word:
+            skipped += [word_no_kana]
             print(f'Could not find definition for {word}. Skipping...')
             continue
 
@@ -179,17 +182,21 @@ for sub_idx, sub_file in enumerate(sub_files):
 
     # Export anki deck
     genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{n_most_common}.apkg')
+    
+    
 
+    # Export words to ignore for future decks
     IGNORE_FILENAME = 'previous_export_words.txt'
     ignore_file = os.path.join(IGNORE_DIR, IGNORE_FILENAME)
+    new_ignores = skipped + words_added
 
     if os.path.isfile(ignore_file):
         with open(ignore_file, 'r') as file:
             for line in file:
-                words_added += [line.replace('\n', '')]
+                new_ignores += [line.replace('\n', '')]
 
-    words_added = sorted(set(words_added))
+    new_ignores = sorted(set(new_ignores))
 
     with open(ignore_file, 'w') as file:
-        file.writelines([w + '\n' for w in words_added])
+        file.writelines([w + '\n' for w in new_ignores])
 

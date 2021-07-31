@@ -21,18 +21,30 @@ Note: jisho-py currently must be copied to the site-packages directory because i
 - genanki - package for generating anki decks
 
 # Usage
-Export anki deck with 10 most common words and kana included in question
-```
-python subjapflash.py -s Subtitles/Naruto_Shippuuden_393.srt
-```
-Export anki deck with 20 most common words and no kana
-```
-python subjapflash.py -s Subtitles/Naruto_Shippuuden_393.srt --top 20 --kana False 
-```
-Save with different deck name
-```
-python subjapflash.py -s Subtitles/Naruto_Shippuuden_393.srt --deck_name My_Custom_Deck
-```
+- Export anki deck with 10 most common words and kana included in question
+    ```
+    python subjapflash.py -s Subtitles/Naruto_Shippuuden_393.srt
+    ```
+- Export anki deck with 20 most common words and no kana
+    ```
+    python subjapflash.py -s Subtitles/Naruto_Shippuuden_393.srt --top 20 --kana False 
+    ```
+- Save with different deck name
+    ```
+    python subjapflash.py -s Subtitles/Naruto_Shippuuden_393.srt --deck_name My_Custom_Deck
+    ```
+- Export all subtitle files in Subtitles directory to anki decks (exclude -s arg)
+    ```
+    python subjapflash.py
+    ```
+### optional arguments:
+  -s, --sub Subtitle path. If arg not used, will process all files in Subtitles dir
+  -t, --top Get the top n most common words. Default 10.
+  -k, --kana Include kana in Anki card Question. Default True.
+  -l, --max_lines Maximum number of lines to add to Anki cards answer. Default 10
+  -n, --deck_name What to name the exported deck
+  -i, --ignore_added Exports any added words to the ignore list. Default True
+  -list, --export_list  Exports any added words to the ignore list   
 
 Notes
 - All words will automatically be added to the ignore list under the `IGNORE_LIST/previous_export_words.txt` unless the `--ignore_added True` argument is used.

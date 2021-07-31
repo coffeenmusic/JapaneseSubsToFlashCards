@@ -49,7 +49,7 @@ for sub_idx, sub_file in enumerate(sub_files):
         deck_name = ntpath.basename(sub_file).split('.')[0]
     else:
         default_name = DEFAULT_DECK_NAME.split('.')[0]
-        deck_name = args.deck_name if args.deck_name != None else f'{default_name}_{sub_idx}'
+        deck_name = ntpath.basename(args.sub).split('.')[0] if args.sub != None else f'{default_name}_{sub_idx}'
     
     """
     Part 1: Get n most common Words --------------

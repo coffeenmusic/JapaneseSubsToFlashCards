@@ -12,6 +12,7 @@ Subtitle Sites:
 ![Example](example.png)
 
 Download a japanese subtitle file. This tool will parse that file and give you the n most common japanese words used. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
+Any words added to a deck will also be added to an ignore list in the IGNORE_LIST directory.
 
 # Dependencies
 - fugashi - package for japanese language tokenization (I'm using it to break the corpus in to separate words)

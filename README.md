@@ -38,13 +38,15 @@ Note: jisho-py currently must be copied to the site-packages directory because i
     python subjapflash.py
     ```
 ### optional arguments:
+```
   -s, --sub Subtitle path. If arg not used, will process all files in Subtitles dir
   -t, --top Get the top n most common words. Default 10.
   -k, --kana Include kana in Anki card Question. Default True.
   -l, --max_lines Maximum number of lines to add to Anki cards answer. Default 10
   -n, --deck_name What to name the exported deck
   -i, --ignore_added Exports any added words to the ignore list. Default True
-  -list, --export_list  Exports any added words to the ignore list   
+  -list, --export_list  Exports any added words to the ignore list
+``` 
 
 Notes
 - All words will automatically be added to the ignore list under the `IGNORE_LIST/previous_export_words.txt` unless the `--ignore_added True` argument is used.

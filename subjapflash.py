@@ -174,7 +174,7 @@ ignore_file = os.path.join(IGNORE_DIR, IGNORE_FILENAME)
 if os.path.isfile(ignore_file):
     with open(ignore_file, 'r') as file:
         for line in file:
-            words_added += [line]
+            words_added += [line.replace('\n', '')]
             
 words_added = sorted(set(words_added))
 

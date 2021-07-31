@@ -7,7 +7,8 @@ Subtitle Sites:
 - https://kitsunekko.net
 
 # How it works
-Anki Flash Card Example
+### Anki Flash Card Example
+
 ![Example](example.png)
 
 Download a japanese subtitle file. This tool will parse that file and give you the n most common japanese words used. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.

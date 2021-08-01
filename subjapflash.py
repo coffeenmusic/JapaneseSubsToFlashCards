@@ -46,17 +46,17 @@ process_all = args.sub == None
 if process_all:
     sub_files = [os.path.join(SUB_DIR, f) for f in os.listdir(SUB_DIR) if f.endswith('|'.join(valid_extensions))]
     if args.merge:
-        merged_deck_name = merge_matching_strings(sub_files)
+        merged_deck_name = merge_matching_strings([ntpath.basename(f).split('.')[0] for f in sub_files])
 else:
     sub_files = [args.sub]
     
 for sub_idx, sub_file in enumerate(sub_files):
     if len(sub_files) > 1:
         deck_name = ntpath.basename(sub_file).split('.')[0]
+        deck_name = merged_deck_name if args.merge and len(merged_deck_name) > 2 else deck_name
     else:
         default_name = DEFAULT_DECK_NAME.split('.')[0]
         deck_name = ntpath.basename(args.sub).split('.')[0] if args.sub != None else f'{default_name}_{sub_idx}'
-        deck_name = merged_deck_name if args.merge and len(merged_deck_name) > 2 else deck_name
         
     
     """

@@ -50,6 +50,7 @@ Note: jisho-py currently must be copied to the site-packages directory because i
   -l, --max_lines Maximum number of lines to add to Anki cards answer. Default 10
   -n, --deck_name What to name the exported deck
   -i, --ignore_added Exports any added words to the ignore list. Default True
+  -m, --merge Exports all subtitle files' most common words to a single deck
   -list, --export_list  Exports any added words to the ignore list
 ``` 
 

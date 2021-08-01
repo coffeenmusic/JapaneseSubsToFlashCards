@@ -11,7 +11,7 @@ Subtitle Sites:
 
 ![Example](example.png)
 
-Download a japanese subtitle file. This tool will parse that file and give you the n most common japanese words used. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
+Download a japanese subtitle file. This tool will parse that file and give you the n most common japanese words used. The words are translated using jisho.org as the dictionary. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
 Any words added to a deck will also be added to an ignore list in the IGNORE_LIST directory.
 
 # Dependencies
@@ -37,6 +37,11 @@ Note: jisho-py currently must be copied to the site-packages directory because i
     ```
     python subjapflash.py
     ```
+- Export all subtitle files in Subtitles directory a single anki deck (exclude -s arg)
+    ```
+    python subjapflash.py --merge
+    ```
+    
 ### optional arguments:
 ```
   -s, --sub Subtitle path. If arg not used, will process all files in Subtitles dir

@@ -1,3 +1,5 @@
+from helper import merge_matching_strings
+
 import fugashi
 from fugashi import Tagger
 
@@ -31,6 +33,7 @@ parser.add_argument('-l', '--max_lines', type=int, help='Maximum number of lines
 parser.add_argument('-n', '--deck_name', type=str, help='What to name the exported deck')
 parser.add_argument('-i', '--ignore_added', type=bool, help='Exports any added words to the ignore list. Default True')
 parser.add_argument('-list', '--export_list', action='store_true', help='Exports any added words to the ignore list')
+parser.add_argument('-m', '--merge', action='store_true', help='Create one merged deck for all files in Subtitles dir')
 
 args = parser.parse_args()
 include_kana = args.kana == 'True' or args.kana == '1' if args.kana != None else INCLUDE_KANA
@@ -39,8 +42,11 @@ export_list = args.export_list if args.export_list != None else False
 max_lines = args.max_lines if args.max_lines != None else MAX_ANSWER_LINE_COUNT
 process_all = args.sub == None
 
+
 if process_all:
     sub_files = [os.path.join(SUB_DIR, f) for f in os.listdir(SUB_DIR) if f.endswith('|'.join(valid_extensions))]
+    if args.merge:
+        merged_deck_name = merge_matching_strings(sub_files)
 else:
     sub_files = [args.sub]
     
@@ -50,6 +56,8 @@ for sub_idx, sub_file in enumerate(sub_files):
     else:
         default_name = DEFAULT_DECK_NAME.split('.')[0]
         deck_name = ntpath.basename(args.sub).split('.')[0] if args.sub != None else f'{default_name}_{sub_idx}'
+        deck_name = merged_deck_name if args.merge and len(merged_deck_name) > 2 else deck_name
+        
     
     """
     Part 1: Get n most common Words --------------
@@ -60,16 +68,15 @@ for sub_idx, sub_file in enumerate(sub_files):
         if not os.path.isdir(dir_name):
             os.mkdir(dir_name)
 
+    # Import ignore list
     ignore = []
-    for ignore_file in os.listdir(IGNORE_DIR):
+    for ignore_file in [f for f in os.listdir(IGNORE_DIR) if f.endswith('.txt')]:
         ignore_file = os.path.join(IGNORE_DIR, ignore_file)
         with open(ignore_file, 'r') as file:
             for line in file:
                 ignore += [line.replace('\n', '')]
 
-    #sub_extensions = ['srt']
-    #sub_files = [f for f in os.listdir(SUB_DIR) if f.split('.')[-1] in sub_extensions]
-
+    # Import subtitle text and parse in to word list using NLP package for tokenization
     all_words = []
     with open(sub_file, 'r') as file:
         for line in file:
@@ -79,12 +86,14 @@ for sub_idx, sub_file in enumerate(sub_files):
                     kana_str = ' ('+word.feature.kana+')'
                 all_words += [word.surface+kana_str]
 
-    filtered = [w for w in all_words if w.split()[0] not in ignore and not w.isdigit()]
+    # Filter out ignore list words
+    filtered = [w for w in all_words if w not in ['　', ' '] and w.split()[0] not in ignore and not w.isdigit()]
     print(f'Total Words: {len(all_words)}, Filtered Words: {len(filtered)}')
 
     word_counts = Counter(filtered)
-    print(word_counts.most_common()[:n_most_common])
+    print(''.join([str(w) + '\n' for w in word_counts.most_common()[:n_most_common]]))
 
+    # If export as list instead of anki deck
     if export_list:
         with open(deck_name+'.list', 'w') as file:
             file.writelines([w[0]+'\n' for w in word_counts.most_common()[:n_most_common]])
@@ -95,30 +104,30 @@ for sub_idx, sub_file in enumerate(sub_files):
     """
     Part 2: Get definitions & export to Anki Deck --------------
     """
+    
+    # Process each iteration in to a separate deck unless merge is True, then only create deck on first pass
+    if sub_idx == 0 or not args.merge: 
+        # Build template for card format
+        model_id = random.randrange(1 << 30, 1 << 31)
+        template = genanki.Model(
+          model_id,
+          'Simple Model',
+          fields=[
+            {'name': 'Question'},
+            {'name': 'Answer'},
+          ],
+          templates=[
+            {
+              'name': 'Card 1',
+              'qfmt': '{{Question}}',
+              'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
+            },
+          ])
 
-
-    model_id = random.randrange(1 << 30, 1 << 31)
-
-    # Build template for card format
-    template = genanki.Model(
-      model_id,
-      'Simple Model',
-      fields=[
-        {'name': 'Question'},
-        {'name': 'Answer'},
-      ],
-      templates=[
-        {
-          'name': 'Card 1',
-          'qfmt': '{{Question}}',
-          'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
-        },
-      ])
-
-    deck_id = random.randrange(1 << 30, 1 << 31)
-    deck = genanki.Deck(
-      deck_id,
-      deck_name)
+        deck_id = random.randrange(1 << 30, 1 << 31)
+        deck = genanki.Deck(
+          deck_id,
+          deck_name)
 
     def parse_answer(answers):
         answer_str = ''
@@ -135,7 +144,7 @@ for sub_idx, sub_file in enumerate(sub_files):
             answer_str += '<ul>'
             for i, (en, jp) in enumerate(zip(def_en, def_jp)):
                 jp_str = ' '.join(jp.reading)
-                en_str = ' '.join(en.meaning)
+                en_str = '; '.join(en.meaning)
 
                 answer_str += '<li>'
                 answer_str += f'({jp_str}) {en_str}' if len(answers[0].en) > 1 else f'({jp_str}) {en_str}'
@@ -150,6 +159,7 @@ for sub_idx, sub_file in enumerate(sub_files):
                 break
         return answer_str
 
+    # Iterate most common words, get definition from jisho.org, add to anki card
     add_cnt = 0
     words_added = []
     skipped = []
@@ -181,7 +191,8 @@ for sub_idx, sub_file in enumerate(sub_files):
             break
 
     # Export anki deck
-    genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{n_most_common}.apkg')
+    if not args.merge or sub_idx == len(sub_files)-1:
+        genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{n_most_common}.apkg')
     
     
 

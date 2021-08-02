@@ -30,16 +30,8 @@ tagger = Tagger()
 for dir_name in [SUB_DIR, DECK_DIR, IGNORE_DIR, MATCH_DIR]:
     if not os.path.isdir(dir_name):
         os.mkdir(dir_name)
-
-# Import ignore list
-ignore = []
-for ignore_file in [f for f in os.listdir(IGNORE_DIR) if f.endswith('.txt')]:
-    ignore_file = os.path.join(IGNORE_DIR, ignore_file)
-    with open(ignore_file, 'r', encoding="utf-8") as file:
-        for line in file:
-            ignore += [line.replace('\n', '')]
             
-# Import ignore list
+# Import match list
 match = []
 for match_file in [f for f in os.listdir(MATCH_DIR) if f.endswith('.txt')]:
     match_file = os.path.join(MATCH_DIR, match_file)
@@ -56,14 +48,14 @@ parser.add_argument('-k', '--kana', type=str, help='Include kana in Anki card Qu
 parser.add_argument('-l', '--max_lines', type=int, help='Maximum number of lines to add to Anki cards answer. Default 10')
 parser.add_argument('-n', '--deck_name', type=str, help='What to name the exported deck')
 parser.add_argument('-i', '--ignore_added', type=bool, help='Exports any added words to the ignore list. Default True')
-parser.add_argument('-list', '--export_list', action='store_true', help='Exports any added words to the ignore list')
+parser.add_argument('-list', '--list_only', action='store_true', help='Exports any added words to the ignore list')
 parser.add_argument('-m', '--merge', action='store_true', help='Create one merged deck for all files in Subtitles dir')
 parser.add_argument('-skip', '--skip_match', action='store_true', help='Dont filter out words in MATCH_LIST dir')
 
 args = parser.parse_args()
 include_kana = args.kana == 'True' or args.kana == '1' if args.kana != None else INCLUDE_KANA
 n_most_common = args.top if args.top else N_MOST_COMMON_WORDS
-export_list = args.export_list if args.export_list != None else False
+export_list = args.list_only if args.list_only != None else False
 max_lines = args.max_lines if args.max_lines != None else MAX_ANSWER_LINE_COUNT
 process_all = args.sub == None
 
@@ -87,6 +79,14 @@ for sub_idx, sub_file in enumerate(sub_files):
     """
     Part 1: Get n most common Words --------------
     """
+    
+    # Import ignore list
+    ignore = []
+    for ignore_file in [f for f in os.listdir(IGNORE_DIR) if f.endswith('.txt')]:
+        ignore_file = os.path.join(IGNORE_DIR, ignore_file)
+        with open(ignore_file, 'r', encoding="utf-8") as file:
+            for line in file:
+                ignore += [line.replace('\n', '')]
 
     # Import subtitle text and parse in to word list using NLP package for tokenization
     all_words = []
@@ -207,7 +207,9 @@ for sub_idx, sub_file in enumerate(sub_files):
     if not args.merge or sub_idx == len(sub_files)-1:
         genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{n_most_common}.apkg')
     
-    
+    # Export List
+    with open(os.path.join(DECK_DIR, deck_name+'.list'), 'w', encoding="utf-8") as file:
+        file.writelines([w + '\n' for w in words_added])
 
     # Export words to ignore for future decks
     IGNORE_FILENAME = 'previous_export_words.txt'

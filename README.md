@@ -41,6 +41,10 @@ Note: jisho-py currently must be copied to the site-packages directory because i
     ```
     python subjapflash.py --merge
     ```
+- Allow words outside N5-N1 core dictionary (You can also add your own words to MATCH_LISTS dir)
+    ```
+    python subjapflash.py --skip_match
+    ```
     
 ### optional arguments:
 ```

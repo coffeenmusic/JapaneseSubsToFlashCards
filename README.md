@@ -11,7 +11,7 @@ Subtitle Sites:
 
 ![Example](example.png)
 
-Download a japanese subtitle file. This tool will parse that file and give you the n most common japanese words used. The words are translated using jisho.org as the dictionary. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
+Download a japanese subtitle file. This tool will parse that file and give you the n most common japanese words used (Words not in the Match_List dir will be filtered out). The words are translated using jisho.org as the dictionary. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
 Any words added to a deck will also be added to an ignore list in the IGNORE_LIST directory.
 
 # Dependencies

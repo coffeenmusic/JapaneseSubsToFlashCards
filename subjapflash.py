@@ -23,7 +23,33 @@ IGNORE_FILENAME = 'previous_export_words.txt'
 SUB_DIR = 'Subtitles'
 DECK_DIR = 'Anki_Decks'
 IGNORE_DIR = 'Ignore_Lists'
+MATCH_DIR = 'Match_Lists'
 valid_extensions = ['.srt']
+
+tagger = Tagger()
+for dir_name in [SUB_DIR, DECK_DIR, IGNORE_DIR, MATCH_DIR]:
+    if not os.path.isdir(dir_name):
+        os.mkdir(dir_name)
+
+# Import ignore list
+ignore = []
+for ignore_file in [f for f in os.listdir(IGNORE_DIR) if f.endswith('.txt')]:
+    ignore_file = os.path.join(IGNORE_DIR, ignore_file)
+    with open(ignore_file, 'r', encoding="utf-8") as file:
+        for line in file:
+            ignore += [line.replace('\n', '')]
+            
+# Import ignore list
+match = []
+for match_file in [f for f in os.listdir(MATCH_DIR) if f.endswith('.txt')]:
+    match_file = os.path.join(MATCH_DIR, match_file)
+    with open(match_file, 'r', encoding="utf-8") as file:
+        for line in file:
+            for word in line.split(','):
+                for token in tagger(word):
+                    match += [token.surface]
+#with open('tagged.list', 'w', encoding="utf-8") as file:
+#    file.writelines([w+'\n' for w in match])
 
 parser = argparse.ArgumentParser(description='Convert a japanese subtitle file to a list of the most common words from that file & export as Anki flash card deck.')
 parser.add_argument('-s', '--sub', type=str, help='Subtitle path. If arg not used, will process all files in Subtitles dir')
@@ -63,19 +89,6 @@ for sub_idx, sub_file in enumerate(sub_files):
     Part 1: Get n most common Words --------------
     """
 
-    tagger = Tagger()
-    for dir_name in [SUB_DIR, DECK_DIR, IGNORE_DIR]:
-        if not os.path.isdir(dir_name):
-            os.mkdir(dir_name)
-
-    # Import ignore list
-    ignore = []
-    for ignore_file in [f for f in os.listdir(IGNORE_DIR) if f.endswith('.txt')]:
-        ignore_file = os.path.join(IGNORE_DIR, ignore_file)
-        with open(ignore_file, 'r', encoding="utf-8") as file:
-            for line in file:
-                ignore += [line.replace('\n', '')]
-
     # Import subtitle text and parse in to word list using NLP package for tokenization
     all_words = []
     with open(sub_file, 'r', encoding="utf-8") as file:
@@ -88,7 +101,7 @@ for sub_idx, sub_file in enumerate(sub_files):
 
     # Filter out ignore list words
     filtered = [w for w in all_words if w not in ['　', ' '] and w.split()[0] not in ignore and not w.isdigit()]
-    print(f'Total Words: {len(all_words)}, Filtered Words: {len(filtered)}')
+    filtered = [w for w in filtered if w.split()[0] in match]
 
     word_counts = Counter(filtered)
     print(''.join([str(w) + '\n' for w in word_counts.most_common()[:n_most_common]]))
@@ -98,7 +111,6 @@ for sub_idx, sub_file in enumerate(sub_files):
         with open(deck_name+'.list', 'w', encoding="utf-8") as file:
             file.writelines([w[0]+'\n' for w in word_counts.most_common()[:n_most_common]])
         exit(0)
-
 
 
     """

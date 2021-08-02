@@ -72,13 +72,13 @@ for sub_idx, sub_file in enumerate(sub_files):
     ignore = []
     for ignore_file in [f for f in os.listdir(IGNORE_DIR) if f.endswith('.txt')]:
         ignore_file = os.path.join(IGNORE_DIR, ignore_file)
-        with open(ignore_file, 'r') as file:
+        with open(ignore_file, 'r', encoding="utf-8") as file:
             for line in file:
                 ignore += [line.replace('\n', '')]
 
     # Import subtitle text and parse in to word list using NLP package for tokenization
     all_words = []
-    with open(sub_file, 'r') as file:
+    with open(sub_file, 'r', encoding="utf-8") as file:
         for line in file:
             for word in tagger(line):
                 kana_str = ''
@@ -95,7 +95,7 @@ for sub_idx, sub_file in enumerate(sub_files):
 
     # If export as list instead of anki deck
     if export_list:
-        with open(deck_name+'.list', 'w') as file:
+        with open(deck_name+'.list', 'w', encoding="utf-8") as file:
             file.writelines([w[0]+'\n' for w in word_counts.most_common()[:n_most_common]])
         exit(0)
 
@@ -202,12 +202,12 @@ for sub_idx, sub_file in enumerate(sub_files):
     new_ignores = skipped + words_added
 
     if os.path.isfile(ignore_file):
-        with open(ignore_file, 'r') as file:
+        with open(ignore_file, 'r', encoding="utf-8") as file:
             for line in file:
                 new_ignores += [line.replace('\n', '')]
 
     new_ignores = sorted(set(new_ignores))
 
-    with open(ignore_file, 'w') as file:
+    with open(ignore_file, 'w', encoding="utf-8") as file:
         file.writelines([w + '\n' for w in new_ignores])
 

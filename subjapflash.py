@@ -51,6 +51,7 @@ parser.add_argument('-i', '--ignore_added', type=bool, help='Exports any added w
 parser.add_argument('-list', '--list_only', action='store_true', help='Exports any added words to the ignore list')
 parser.add_argument('-m', '--merge', action='store_true', help='Create one merged deck for all files in Subtitles dir')
 parser.add_argument('-skip', '--skip_match', action='store_true', help='Dont filter out words in MATCH_LIST dir')
+parser.add_argument('-c', '--count', type=int, help='Add all words with counts > n.')
 
 args = parser.parse_args()
 include_kana = args.kana == 'True' or args.kana == '1' if args.kana != None else INCLUDE_KANA
@@ -106,7 +107,17 @@ for sub_idx, sub_file in enumerate(sub_files):
     print(f'Found {len(all_words)} words, Filtered to {len(filtered)} words')
 
     word_counts = Counter(filtered)
-    print(''.join([str(w) + '\n' for w in word_counts.most_common()[:n_most_common]]))
+    
+    # if args.count is used only keeps words where count > n 
+    if args.count != None and args.count >= 0:
+        for k, v in list(word_counts.items()):
+            if v <= args.count:
+                del word_counts[k]
+        print(''.join([str(w) + '\n' for w in word_counts.most_common()]))
+    else:
+        print(''.join([str(w) + '\n' for w in word_counts.most_common()[:n_most_common]]))
+    
+    
 
     # If export as list instead of anki deck
     if export_list:
@@ -201,12 +212,12 @@ for sub_idx, sub_file in enumerate(sub_files):
 
         add_cnt += 1
 
-        if add_cnt >= n_most_common:
+        if args.count == None and add_cnt >= n_most_common:
             break
 
     # Export anki deck
     if not args.merge or sub_idx == len(sub_files)-1:
-        genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{n_most_common}.apkg')
+        genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{add_cnt}.apkg')
     
     # Export List
     with open(os.path.join(DECK_DIR, deck_name+'.list'), 'w', encoding="utf-8") as file:

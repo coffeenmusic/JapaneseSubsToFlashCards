@@ -66,6 +66,7 @@ if process_all:
         merged_deck_name = merge_matching_strings([ntpath.basename(f).split('.')[0] for f in sub_files])
 else:
     sub_files = [args.sub]
+sub_files = sorted(sub_files)
     
 for sub_idx, sub_file in enumerate(sub_files):
     if len(sub_files) > 1:

@@ -56,6 +56,7 @@ Note: jisho-py currently must be copied to the site-packages directory because i
   -i, --ignore_added Exports any added words to the ignore list. Default True
   -m, --merge Exports all subtitle files' most common words to a single deck
   -list, --export_list  Exports any added words to the ignore list
+  -skip, --skip_match Dont filter out words in MATCH_LIST dir
 ``` 
 
 Notes

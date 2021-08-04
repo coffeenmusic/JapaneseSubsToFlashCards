@@ -1,6 +1,7 @@
 *.apkg
 *.srt
 *.list
+*.zip
 /.ipynb_checkpoints
 /__pycache__
 /Ignore_Lists/previous_export_words.txt

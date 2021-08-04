@@ -15,7 +15,7 @@ import ntpath
 
 # defaults
 N_MOST_COMMON_WORDS = 10 # Top n most common words
-MAX_ANSWER_LINE_COUNT = 10 # Number of lines allowed on Anki card's answer
+MAX_ANSWER_LINE_COUNT = 100 # Number of lines allowed on Anki card's answer
 INCLUDE_KANA = True # Include on Anki card's Question next to Kanji
 IGNORE_ADDED = True
 DEFAULT_DECK_NAME = 'exported.apkg'
@@ -70,13 +70,12 @@ else:
 sub_files = sorted(sub_files)
     
 for sub_idx, sub_file in enumerate(sub_files):
-    if len(sub_files) > 1:
+    if args.sub == None:
         deck_name = ntpath.basename(sub_file).split('.')[0]
         deck_name = merged_deck_name if args.merge and len(merged_deck_name) > 2 else deck_name
     else:
         default_name = DEFAULT_DECK_NAME.split('.')[0]
         deck_name = ntpath.basename(args.sub).split('.')[0] if args.sub != None else f'{default_name}_{sub_idx}'
-        
     
     """
     Part 1: Get n most common Words --------------

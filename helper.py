@@ -9,3 +9,16 @@ def merge_matching_strings(str_list, alpha_only=True):
     merged = ''.join([c for c in merged if c.isalpha() or c in [' ', '_']]) if alpha_only else merged
     merged = merged.strip().replace(' ', '_') 
     return merged
+    
+deck_style = """
+    .card {
+     font-size: 16px;
+     text-align: left;
+     color: black;
+     background-color: white;
+    }
+    .question {
+     font-size: 64px;
+     text-align: center;
+    }
+    """

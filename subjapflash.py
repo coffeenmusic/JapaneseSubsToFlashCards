@@ -1,4 +1,4 @@
-from helper import merge_matching_strings
+from helper import merge_matching_strings, deck_style
 
 import fugashi
 from fugashi import Tagger
@@ -59,7 +59,6 @@ n_most_common = args.top if args.top else N_MOST_COMMON_WORDS
 export_list = args.list_only if args.list_only != None else False
 max_lines = args.max_lines if args.max_lines != None else MAX_ANSWER_LINE_COUNT
 process_all = args.sub == None
-
 
 if process_all:
     sub_files = [os.path.join(SUB_DIR, f) for f in os.listdir(SUB_DIR) if f.endswith('|'.join(valid_extensions))]
@@ -129,13 +128,14 @@ for sub_idx, sub_file in enumerate(sub_files):
     Part 2: Get definitions & export to Anki Deck --------------
     """
     
-    # Process each iteration in to a separate deck unless merge is True, then only create deck on first pass
+    
+    #Process each iteration in to a separate deck unless merge is True, then only create deck on first pass
     if sub_idx == 0 or not args.merge: 
         # Build template for card format
         model_id = random.randrange(1 << 30, 1 << 31)
         template = genanki.Model(
           model_id,
-          'Simple Model',
+          'SubJapFlash_Model',
           fields=[
             {'name': 'Question'},
             {'name': 'Answer'},
@@ -143,10 +143,11 @@ for sub_idx, sub_file in enumerate(sub_files):
           templates=[
             {
               'name': 'Card 1',
-              'qfmt': '{{Question}}',
+              'qfmt': '<p class="question">{{Question}}</p>',
               'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
             },
-          ])
+          ],
+          css=deck_style)
 
         deck_id = random.randrange(1 << 30, 1 << 31)
         deck = genanki.Deck(

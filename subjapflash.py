@@ -17,9 +17,8 @@ import ntpath
 N_MOST_COMMON_WORDS = 10 # Top n most common words
 MAX_ANSWER_LINE_COUNT = 100 # Number of lines allowed on Anki card's answer
 INCLUDE_KANA = True # Include on Anki card's Question next to Kanji
-IGNORE_ADDED = True
 DEFAULT_DECK_NAME = 'exported.apkg'
-IGNORE_FILENAME = 'previous_export_words.txt'
+IGNORE_FILE_NAME = 'previous_export_words.txt'
 SUB_DIR = 'Subtitles'
 DECK_DIR = 'Anki_Decks'
 IGNORE_DIR = 'Ignore_Lists'
@@ -46,9 +45,7 @@ parser.add_argument('-s', '--sub', type=str, help='Subtitle path. If arg not use
 parser.add_argument('-t', '--top', type=int, help='Get the top n most common words. Default 10.')
 parser.add_argument('-k', '--kana', type=str, help='Include kana in Anki card Question. Default True.')
 parser.add_argument('-l', '--max_lines', type=int, help='Maximum number of lines to add to Anki cards answer. Default 10')
-parser.add_argument('-n', '--deck_name', type=str, help='What to name the exported deck')
-parser.add_argument('-i', '--ignore_added', type=bool, help='Exports any added words to the ignore list. Default True')
-parser.add_argument('-list', '--list_only', action='store_true', help='Exports any added words to the ignore list')
+parser.add_argument('-i', '--ignore', action='store_true', help='Exports any added words to the ignore list')
 parser.add_argument('-m', '--merge', action='store_true', help='Create one merged deck for all files in Subtitles dir')
 parser.add_argument('-skip', '--skip_match', action='store_true', help='Dont filter out words in MATCH_LIST dir')
 parser.add_argument('-c', '--count', type=int, help='Add all words with counts > n.')
@@ -56,7 +53,6 @@ parser.add_argument('-c', '--count', type=int, help='Add all words with counts >
 args = parser.parse_args()
 include_kana = args.kana == 'True' or args.kana == '1' if args.kana != None else INCLUDE_KANA
 n_most_common = args.top if args.top else N_MOST_COMMON_WORDS
-export_list = args.list_only if args.list_only != None else False
 max_lines = args.max_lines if args.max_lines != None else MAX_ANSWER_LINE_COUNT
 process_all = args.sub == None
 
@@ -114,14 +110,6 @@ for sub_idx, sub_file in enumerate(sub_files):
         print(''.join([str(w) + '\n' for w in word_counts.most_common()]))
     else:
         print(''.join([str(w) + '\n' for w in word_counts.most_common()[:n_most_common]]))
-    
-    
-
-    # If export as list instead of anki deck
-    if export_list:
-        with open(deck_name+'.list', 'w', encoding="utf-8") as file:
-            file.writelines([w[0]+'\n' for w in word_counts.most_common()[:n_most_common]])
-        exit(0)
 
 
     """
@@ -223,18 +211,26 @@ for sub_idx, sub_file in enumerate(sub_files):
     with open(os.path.join(DECK_DIR, deck_name+'.list'), 'w', encoding="utf-8") as file:
         file.writelines([w + '\n' for w in words_added])
 
-    # Export words to ignore for future decks
-    IGNORE_FILENAME = 'previous_export_words.txt'
-    ignore_file = os.path.join(IGNORE_DIR, IGNORE_FILENAME)
-    new_ignores = skipped + words_added
+    # Export words to logs in log directory
+    log_files = []
+    if args.ignore:
+        log_files += [os.path.join(IGNORE_DIR, IGNORE_FILE_NAME)]
+    
+    # Export to ignore lists if user specified. Skip by default
+    for log_file in log_files:
+        new_words = skipped + words_added
+    
+        # Get existing text
+        if os.path.isfile(log_file):
+            with open(log_file, 'r', encoding="utf-8") as file:
+                for line in file:
+                    new_words += [line.replace('\n', '')]
 
-    if os.path.isfile(ignore_file):
-        with open(ignore_file, 'r', encoding="utf-8") as file:
-            for line in file:
-                new_ignores += [line.replace('\n', '')]
+        new_words = sorted(set(new_words))
 
-    new_ignores = sorted(set(new_ignores))
-
-    with open(ignore_file, 'w', encoding="utf-8") as file:
-        file.writelines([w + '\n' for w in new_ignores])
-
+        # Export new text
+        with open(log_file, 'w', encoding="utf-8") as file:
+            file.writelines([w + '\n' for w in new_words])
+print()
+print(f'Export complete. See {DECK_DIR}/ directory for exported anki decks.')
+print(f'Please add any learned words to an ignore list in the {IGNORE_DIR}/ directory to filter from future decks.')

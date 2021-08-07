@@ -1,5 +1,3 @@
-from helper import merge_matching_strings, deck_style
-
 import fugashi
 from fugashi import Tagger
 
@@ -12,6 +10,7 @@ import os
 from collections import Counter
 import random
 import ntpath
+        
 
 # defaults
 N_MOST_COMMON_WORDS = 10 # Top n most common words
@@ -25,155 +24,78 @@ IGNORE_DIR = 'Ignore_Lists'
 MATCH_DIR = 'Match_Lists'
 valid_extensions = ['.srt']
 
-tagger = Tagger()
-for dir_name in [SUB_DIR, DECK_DIR, IGNORE_DIR, MATCH_DIR]:
-    if not os.path.isdir(dir_name):
-        os.mkdir(dir_name)
+# class SubJapFlash():
+    # def __init__(self, sub_dir, top=10):
+        # self.sub_dir = sub_dir
+        # self.sub_files = [os.path.join(SUB_DIR, f) for f in os.listdir(SUB_DIR) if f.endswith('|'.join(valid_extensions))]
+        # self.sub_dict = {sub_file: self._get_word_counts(sub_file, top=top) for sub_file in self.sub_files}
+        
+    # def build_deck(self, sub_file, top=10):
+        # #Process each iteration in to a separate deck unless merge is True, then only create deck on first pass
+        # if sub_idx == 0 or not args.merge: 
+            # deck, template = init_anki_deck(deck_name)
+        # deck, words_added, skipped = build_deck_cards(word_counts, deck, template, n_most_common, max_lines=max_lines, min_word_cnt=args.count)
+        
+    # def _get_word_counts(self, sub_file, top=10, ignore_list=None, match_list=None, include_kana=True, skip_match=False, min_word_count=None):
+        # if ignore_list == None:
+            # ignore = dir_text_to_line_list(IGNORE_DIR)
+        # if not skip_match and match_list == None:
+            # match = get_match_list()
             
-# Import match list
-match = []
-for match_file in [f for f in os.listdir(MATCH_DIR) if f.endswith('.txt')]:
-    match_file = os.path.join(MATCH_DIR, match_file)
-    with open(match_file, 'r', encoding="utf-8") as file:
-        for line in file:
+        # return get_word_counts(sub_file, ignore, match, include_kana=include_kana, skip_match=skip_match, min_word_cnt=min_word_count)
+        
+    # def __len__(self):
+        # return len(os.listdir(sub_dir))
+
+tagger = Tagger()
+
+def file_to_line_list(filename, encoding='utf-8'):
+    line_list = []
+    with open(filename, 'r', encoding=encoding) as file:
+            for line in file:
+                line_list += [line.replace('\n', '')]
+    return line_list
+
+def dir_text_to_line_list(directory, ext='.txt'):
+    line_list = []
+    for dir_file in [f for f in os.listdir(directory) if f.endswith(ext)]:
+        line_list += file_to_line_list(os.path.join(directory, dir_file))
+    return line_list
+    
+def get_match_list():
+    match = []
+    for match_file in [f for f in os.listdir(MATCH_DIR) if f.endswith('.txt')]:
+        for line in file_to_line_list(os.path.join(MATCH_DIR, match_file)):
             for word in line.replace(',', '\n').split('\n'):
                 for token in tagger(word):
                     match += [token.surface]
-
-parser = argparse.ArgumentParser(description='Convert a japanese subtitle file to a list of the most common words from that file & export as Anki flash card deck.')
-parser.add_argument('-s', '--sub', type=str, help='Subtitle path. If arg not used, will process all files in Subtitles dir')
-parser.add_argument('-t', '--top', type=int, help='Get the top n most common words. Default 10.')
-parser.add_argument('-k', '--kana', type=str, help='Include kana in Anki card Question. Default True.')
-parser.add_argument('-l', '--max_lines', type=int, help='Maximum number of lines to add to Anki cards answer. Default 10')
-parser.add_argument('-i', '--ignore', action='store_true', help='Exports any added words to the ignore list')
-parser.add_argument('-m', '--merge', action='store_true', help='Create one merged deck for all files in Subtitles dir')
-parser.add_argument('-skip', '--skip_match', action='store_true', help='Dont filter out words in MATCH_LIST dir')
-parser.add_argument('-c', '--count', type=int, help='Add all words with counts > n.')
-
-args = parser.parse_args()
-include_kana = args.kana == 'True' or args.kana == '1' if args.kana != None else INCLUDE_KANA
-n_most_common = args.top if args.top else N_MOST_COMMON_WORDS
-max_lines = args.max_lines if args.max_lines != None else MAX_ANSWER_LINE_COUNT
-process_all = args.sub == None
-
-if process_all:
-    sub_files = [os.path.join(SUB_DIR, f) for f in os.listdir(SUB_DIR) if f.endswith('|'.join(valid_extensions))]
-    if args.merge:
-        merged_deck_name = merge_matching_strings([ntpath.basename(f).split('.')[0] for f in sub_files])
-else:
-    sub_files = [args.sub]
-sub_files = sorted(sub_files)
+    return match
     
-for sub_idx, sub_file in enumerate(sub_files):
-    if args.sub == None:
-        deck_name = ntpath.basename(sub_file).split('.')[0]
-        deck_name = merged_deck_name if args.merge and len(merged_deck_name) > 2 else deck_name
-    else:
-        default_name = DEFAULT_DECK_NAME.split('.')[0]
-        deck_name = ntpath.basename(args.sub).split('.')[0] if args.sub != None else f'{default_name}_{sub_idx}'
-    
-    """
-    Part 1: Get n most common Words --------------
-    """
-    
-    # Import ignore list
-    ignore = []
-    for ignore_file in [f for f in os.listdir(IGNORE_DIR) if f.endswith('.txt')]:
-        ignore_file = os.path.join(IGNORE_DIR, ignore_file)
-        with open(ignore_file, 'r', encoding="utf-8") as file:
-            for line in file:
-                ignore += [line.replace('\n', '')]
-
-    # Import subtitle text and parse in to word list using NLP package for tokenization
+def get_word_counts(sub_file, ignore_list, match_list, include_kana=True, skip_match=False, min_word_cnt=None):
     all_words = []
-    with open(sub_file, 'r', encoding="utf-8") as file:
-        for line in file:
-            for word in tagger(line):
-                kana_str = ''
-                if include_kana and word.feature.kana:
-                    kana_str = ' ('+word.feature.kana+')'
-                all_words += [word.surface+kana_str]
+    for line in file_to_line_list(sub_file):
+        for word in tagger(line):
+            kana_str = ''
+            if include_kana and word.feature.kana:
+                kana_str = ' ('+word.feature.kana+')'
+            all_words += [word.surface+kana_str]
 
     # Filter out ignore list words
-    filtered = [w for w in all_words if w not in ['　', ' '] and w.split()[0] not in ignore and not w.isdigit()]
-    if not args.skip_match:
-        filtered = [w for w in filtered if w.split()[0] in match]
-    print(f'Found {len(all_words)} words, Filtered to {len(filtered)} words')
+    filtered = [w for w in all_words if w not in ['　', ' '] and w.split()[0] not in ignore_list and not w.isdigit()]
+    if not skip_match:
+        filtered = [w for w in filtered if w.split()[0] in match_list]
 
     word_counts = Counter(filtered)
     
-    # if args.count is used only keeps words where count > n 
-    if args.count != None and args.count >= 0:
+    # if min_word_cnt is used only keeps words where count > n 
+    if min_word_cnt != None and min_word_cnt >= 0:
         for k, v in list(word_counts.items()):
-            if v <= args.count:
+            if v <= min_word_cnt:
                 del word_counts[k]
-        print(''.join([str(w) + '\n' for w in word_counts.most_common()]))
-    else:
-        print(''.join([str(w) + '\n' for w in word_counts.most_common()[:n_most_common]]))
-
-
-    """
-    Part 2: Get definitions & export to Anki Deck --------------
-    """
+                
+    return word_counts
     
-    
-    #Process each iteration in to a separate deck unless merge is True, then only create deck on first pass
-    if sub_idx == 0 or not args.merge: 
-        # Build template for card format
-        model_id = random.randrange(1 << 30, 1 << 31)
-        template = genanki.Model(
-          model_id,
-          'SubJapFlash_Model',
-          fields=[
-            {'name': 'Question'},
-            {'name': 'Answer'},
-          ],
-          templates=[
-            {
-              'name': 'Card 1',
-              'qfmt': '<p class="question">{{Question}}</p>',
-              'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
-            },
-          ],
-          css=deck_style)
-
-        deck_id = random.randrange(1 << 30, 1 << 31)
-        deck = genanki.Deck(
-          deck_id,
-          deck_name)
-
-    def parse_answer(answers):
-        answer_str = ''
-        line_cnt = 0
-        for def_idx in range(len(answers)):
-            def_en = answers[def_idx].en
-            def_jp = answers[def_idx].ja
-
-            # Add new line item for each definition
-            answer_str += f'{def_idx+1}. {def_jp[0].word} ({def_jp[0].reading})<br>'
-            line_cnt += 1
-
-            # Build bullet list for each example under definition
-            answer_str += '<ul>'
-            for i, (en, jp) in enumerate(zip(def_en, def_jp)):
-                jp_str = ' '.join(jp.reading)
-                en_str = '; '.join(en.meaning)
-
-                answer_str += '<li>'
-                answer_str += f'({jp_str}) {en_str}' if len(answers[0].en) > 1 else f'({jp_str}) {en_str}'
-                answer_str += '</li>'
-                line_cnt += 1
-
-                if line_cnt >= max_lines-1:
-                    break
-            answer_str += '</ul>'
-
-            if line_cnt >= max_lines-1:
-                break
-        return answer_str
-
-    # Iterate most common words, get definition from jisho.org, add to anki card
-    add_cnt = 0
+def build_deck_cards(word_counts, deck, template, n_most_common, max_lines=100, min_word_cnt=None):
     words_added = []
     skipped = []
     for word, _ in word_counts.most_common():
@@ -195,42 +117,40 @@ for sub_idx, sub_file in enumerate(sub_files):
             continue
 
         # Add Question & Answer to card
-        card = genanki.Note(model=template, fields=[word, parse_answer(answers)])
+        card = genanki.Note(model=template, fields=[word, parse_answer(answers, max_lines=max_lines)])
         deck.add_note(card)
 
-        add_cnt += 1
-
-        if args.count == None and add_cnt >= n_most_common:
+        if min_word_cnt == None and len(words_added) >= n_most_common:
             break
-
-    # Export anki deck
-    if not args.merge or sub_idx == len(sub_files)-1:
-        genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{add_cnt}.apkg')
+            
+    return deck, words_added, skipped
     
-    # Export List
-    with open(os.path.join(DECK_DIR, deck_name+'.list'), 'w', encoding="utf-8") as file:
-        file.writelines([w + '\n' for w in words_added])
+def parse_answer(answers, max_lines=100):
+    answer_str = ''
+    line_cnt = 0
+    for def_idx in range(len(answers)):
+        def_en = answers[def_idx].en
+        def_jp = answers[def_idx].ja
 
-    # Export words to logs in log directory
-    log_files = []
-    if args.ignore:
-        log_files += [os.path.join(IGNORE_DIR, IGNORE_FILE_NAME)]
-    
-    # Export to ignore lists if user specified. Skip by default
-    for log_file in log_files:
-        new_words = skipped + words_added
-    
-        # Get existing text
-        if os.path.isfile(log_file):
-            with open(log_file, 'r', encoding="utf-8") as file:
-                for line in file:
-                    new_words += [line.replace('\n', '')]
+        # Add new line item for each definition
+        answer_str += f'{def_idx+1}. {def_jp[0].word} ({def_jp[0].reading})<br>'
+        line_cnt += 1
 
-        new_words = sorted(set(new_words))
+        # Build bullet list for each example under definition
+        answer_str += '<ul>'
+        for i, (en, jp) in enumerate(zip(def_en, def_jp)):
+            jp_str = ' '.join(jp.reading)
+            en_str = '; '.join(en.meaning)
 
-        # Export new text
-        with open(log_file, 'w', encoding="utf-8") as file:
-            file.writelines([w + '\n' for w in new_words])
-print()
-print(f'Export complete. See {DECK_DIR}/ directory for exported anki decks.')
-print(f'Please add any learned words to an ignore list in the {IGNORE_DIR}/ directory to filter from future decks.')
+            answer_str += '<li>'
+            answer_str += f'({jp_str}) {en_str}' if len(answers[0].en) > 1 else f'({jp_str}) {en_str}'
+            answer_str += '</li>'
+            line_cnt += 1
+
+            if line_cnt >= max_lines-1:
+                break
+        answer_str += '</ul>'
+
+        if line_cnt >= max_lines-1:
+            break
+    return answer_str

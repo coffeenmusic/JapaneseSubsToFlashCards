@@ -70,8 +70,13 @@ def get_match_list():
                 for token in tagger(word):
                     match += [token.surface]
     return match
-    
-def get_word_counts(sub_file, ignore_list, match_list, include_kana=True, skip_match=False, min_word_cnt=None):
+
+def add_example(ex_dict, word, example, max_len=10):
+    example_list = ex_dict.setdefault(word, [])
+    if len(example_list) < max_len and example not in example_list:
+        ex_dict[word] += [example]
+
+def get_word_counts(sub_file, ignore_list, match_list, example_dict=None, include_kana=True, skip_match=False, min_word_cnt=None):
     all_words = []
     for line in file_to_line_list(sub_file):
         # Skip timestamp & index lines
@@ -83,6 +88,11 @@ def get_word_counts(sub_file, ignore_list, match_list, include_kana=True, skip_m
             if include_kana and word.feature.kana:
                 kana_str = ' ('+word.feature.kana+')'
             all_words += [word.surface+kana_str]
+            
+            # Save example
+            example_dict = {} if example_dict == None else example_dict
+            add_example(example_dict, word.surface+kana_str, line)
+            
 
     # Filter out ignore list words
     filtered = [w for w in all_words if w not in ['　', ' '] and w.split()[0] not in ignore_list and not w.isdigit()]
@@ -99,7 +109,7 @@ def get_word_counts(sub_file, ignore_list, match_list, include_kana=True, skip_m
                 
     return word_counts
     
-def build_deck_cards(word_counts, deck, template, n_most_common, max_lines=100, min_word_cnt=None):
+def build_deck_cards(word_counts, example_dict, deck, template, n_most_common, max_lines=100, min_word_cnt=None):
     words_added = []
     skipped = []
     for word, _ in word_counts.most_common():
@@ -121,7 +131,7 @@ def build_deck_cards(word_counts, deck, template, n_most_common, max_lines=100, 
             continue
 
         # Add Question & Answer to card
-        card = genanki.Note(model=template, fields=[word, parse_answer(answers, max_lines=max_lines)])
+        card = genanki.Note(model=template, fields=[word, parse_answer(answers), parse_example(word, example_dict)])
         deck.add_note(card)
 
         if min_word_cnt == None and len(words_added) >= n_most_common:
@@ -158,3 +168,18 @@ def parse_answer(answers, max_lines=100):
         if line_cnt >= max_lines-1:
             break
     return answer_str
+
+def parse_example(word, examples_dict):
+    example_list = examples_dict.get(word)
+    if example_list == None:
+        return ''
+
+    example_str = 'Examples: <br>'
+    example_str += '<ul>'
+    for example in example_list:
+        example_str += '<li>'
+        example_str += example
+        example_str += '</li>'
+    example_str += '</ul>'
+
+    return example_str

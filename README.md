@@ -11,8 +11,8 @@ Subtitle Sites:
 
 ![Example](example.png)
 
-Download a japanese subtitle file. This tool will parse that file and give you the n most common japanese words used (Words not in the Match_List dir will be filtered out). The words are translated using jisho.org as the dictionary. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
-Any learned words should be added to an ignore list .txt file in the Ignore_Lists/ directory.
+Download a japanese subtitle file (place in Subtitles dir). This tool will parse that file and give you the n most common japanese words used (Words not in the Match_List dir will be filtered out). The words are translated using jisho.org as the dictionary. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
+Any learned words should be added to an ignore list .txt file in the Ignore_Lists/ directory. Any words that return null results on jisho.org will be added to an ignore list.
 
 # Dependencies
 - fugashi - package for japanese language tokenization (I'm using it to break the corpus in to separate words)
@@ -23,19 +23,19 @@ Note: jisho-py currently must be copied to the site-packages directory because i
 # Usage
 - Export all subtitle files in Subtitles directory to anki decks (10 most common words default)
     ```
-    python subjapflash.py
+    python cli.py
     ```
 - Export anki deck with 20 most common words and no kana for all subtitle files in Subtitles directory
     ```
-    python subjapflash.py --top 20 --kana False 
+    python cli.py --top 20 --kana False 
     ```
 - Export all subtitle files in Subtitles directory to a single anki deck
     ```
-    python subjapflash.py --merge
+    python cli.py --merge
     ```
 - Allow words outside N5-N1 core dictionary (You can also add your own words to MATCH_LISTS dir)
     ```
-    python subjapflash.py --skip_match
+    python cli.py --skip_match
     ```
     
 ### optional arguments:

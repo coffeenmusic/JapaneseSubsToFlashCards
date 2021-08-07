@@ -1,5 +1,5 @@
-from subjapflash.subjapflash import *
-from subjapflash.helper import merge_matching_strings, init_anki_deck
+from subjapflash import *
+from helper import merge_matching_strings, init_anki_deck
 
 import fugashi
 from fugashi import Tagger
@@ -56,11 +56,14 @@ for sub_idx, sub_file in enumerate(sub_files):
     """
     Part 1: Get n most common Words --------------
     """
+    if sub_idx == 0 or not args.merge:
+        example_dict = {}  # Reset examples on each pass
+    
     # Get words to ignore from ignore directory
     ignore = dir_text_to_line_list(IGNORE_DIR)
     
     # Import subtitle text and parse in to word list using NLP package for tokenization
-    word_counts = get_word_counts(sub_file, ignore, match, include_kana=include_kana, skip_match=args.skip_match, min_word_cnt=args.count)
+    word_counts = get_word_counts(sub_file, ignore, match, example_dict, include_kana=include_kana, skip_match=args.skip_match, min_word_cnt=args.count)
 
     """
     Part 2: Get definitions & export to Anki Deck --------------
@@ -71,10 +74,11 @@ for sub_idx, sub_file in enumerate(sub_files):
         deck, template = init_anki_deck(deck_name)
 
     # Iterate most common words, get definition from jisho.org, add to anki card
-    deck, words_added, skipped = build_deck_cards(word_counts, deck, template, n_most_common, max_lines=max_lines, min_word_cnt=args.count)
+    deck, words_added, skipped = build_deck_cards(word_counts, example_dict, deck, template, n_most_common, max_lines=max_lines, min_word_cnt=args.count)
 
     # Export anki deck
     if not args.merge or sub_idx == len(sub_files)-1:
+        #card = genanki.Note(model=template, fields=[word, parse_answer(answers), parse_example(word, example_dict)])
         genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{len(words_added)}.apkg')
     
     # Export List

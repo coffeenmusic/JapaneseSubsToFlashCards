@@ -34,12 +34,13 @@ def init_anki_deck(deck_name):
       fields=[
         {'name': 'Question'},
         {'name': 'Answer'},
+        {'name': 'Examples'}, 
       ],
       templates=[
         {
           'name': 'Card 1',
           'qfmt': '<p class="question">{{Question}}</p>',
-          'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
+          'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}<hr id="examples">{{Examples}}',
         },
       ],
       css=deck_style)

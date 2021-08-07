@@ -4,5 +4,7 @@
 *.zip
 /.ipynb_checkpoints
 /__pycache__
-/Ignore_Lists/previous_export_words.txt
+/Ignore_Lists/*
 *Archive/
+!/Ignore_Lists/common.txt
+!/Ignore_Lists/main_ignore.txt

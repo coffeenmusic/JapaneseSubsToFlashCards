@@ -74,6 +74,10 @@ def get_match_list():
 def get_word_counts(sub_file, ignore_list, match_list, include_kana=True, skip_match=False, min_word_cnt=None):
     all_words = []
     for line in file_to_line_list(sub_file):
+        # Skip timestamp & index lines
+        if '-->' in line or line.strip().isdigit():
+            continue
+                
         for word in tagger(line):
             kana_str = ''
             if include_kana and word.feature.kana:

@@ -81,21 +81,23 @@ for sub_idx, sub_file in enumerate(sub_files):
     with open(os.path.join(DECK_DIR, deck_name+'.list'), 'w', encoding="utf-8") as file:
         file.writelines([w + '\n' for w in words_added])
 
-    # Export words to ignore directory
-    if args.ignore:
-        ignore_file = os.path.join(IGNORE_DIR, IGNORE_FILE_NAME)
-        new_words = skipped + words_added
-    
-        # Get existing text
-        if os.path.isfile(ignore_file):
-            for line in file_to_line_list(ignore_file):
-                new_words += [line.replace('\n', '')]
+    """
+    Part 3: Export new ignore list to local ignore file --------------
+    """
+    new_ignore_words = skipped + words_added if args.ignore else skipped # Always add any skipped words, no need to ping jisho on these words in the future
+    ignore_file = os.path.join(IGNORE_DIR, IGNORE_FILE_NAME)
 
-            new_words = sorted(set(new_words))
+    # Get existing text
+    if os.path.isfile(ignore_file):
+        for line in file_to_line_list(ignore_file):
+            new_ignore_words += [line.replace('\n', '')]
 
-        # Export new text
-        with open(ignore_file, 'w', encoding="utf-8") as file:
-            file.writelines([w + '\n' for w in new_words])
+        new_ignore_words = sorted(set(new_ignore_words))
+
+    # Export new text
+    with open(ignore_file, 'w', encoding="utf-8") as file:
+        file.writelines([w + '\n' for w in new_ignore_words])
+        
 print()
 print(f'Export complete. See {DECK_DIR}/ directory for exported anki decks.')
 print(f'Please add any learned words to an ignore list in the {IGNORE_DIR}/ directory to filter from future decks.')

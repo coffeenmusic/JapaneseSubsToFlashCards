@@ -14,6 +14,9 @@ Subtitle Sites:
 Download a japanese subtitle file (place in Subtitles dir). This tool will parse that file and give you the n most common japanese words used (Words not in the Match_List dir will be filtered out). The words are translated using jisho.org as the dictionary. It will then export those words and translations to an Anki flash card deck for spaced repetition studying.
 Any learned words should be added to an ignore list .txt file in the Ignore_Lists/ directory. Any words that return null results on jisho.org will be added to an ignore list.
 
+### Subtitle Type Support:
+- Currently only tested with .srt files
+
 # Dependencies
 - fugashi - package for japanese language tokenization (I'm using it to break the corpus in to separate words)
 - jisho-py - package creates a python api to jisho.org japanese dictionary and returns results with japanese kanji & kana as well as english translations
@@ -42,7 +45,7 @@ Note: jisho-py currently must be copied to the site-packages directory because i
 ```
   -s, --sub Subtitle path. If arg not used, will process all files in Subtitles dir
   -t, --top Get the top n most common words. Default 10.
-  -k, --kana Include kana in Anki card Question. Default True.
+  -n, --no_furigana Remove furigana from anki cards question
   -l, --max_lines Maximum number of lines to add to Anki cards answer. Default 10
   -i, --ignore Exports any added words to the ignore list. Default True
   -m, --merge Exports all subtitle files' most common words to a single deck

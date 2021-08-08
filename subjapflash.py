@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 import argparse
 import os
-from collections import Counter
+from collections import Counter, namedtuple
 import random
 import ntpath
         
@@ -15,7 +15,6 @@ import ntpath
 # defaults
 N_MOST_COMMON_WORDS = 10 # Top n most common words
 MAX_ANSWER_LINE_COUNT = 100 # Number of lines allowed on Anki card's answer
-INCLUDE_KANA = True # Include on Anki card's Question next to Kanji
 DEFAULT_DECK_NAME = 'exported.apkg'
 IGNORE_FILE_NAME = 'previous_export_words.txt'
 SUB_DIR = 'Subtitles'
@@ -75,8 +74,76 @@ def add_example(ex_dict, word, example, max_len=10):
     example_list = ex_dict.setdefault(word, [])
     if len(example_list) < max_len and example not in example_list:
         ex_dict[word] += [example]
+        
+def chunk_sub_idx_to_list(sub_line_list):
+    """
+        Pass in a list where each line is a line in the subtitle file
+        Example:
+        ['1', '00:00:00,000 --> 00:00:04,430', 'おはようございます', '2', ...]
+        
+        return a list where each list item is another list where each item is specific to its index
+        Example:
+        [['1', '00:00:00,000 --> 00:00:04,430', 'おはようございます'], ['2', ...], ...]
+    """
+    lines_indexed = []
+    tmp = []
+    for i, line in enumerate(sub_line_list):
+        if line == '':
+            continue
 
-def get_word_counts(sub_file, ignore_list, match_list, example_dict=None, include_kana=True, skip_match=False, min_word_cnt=None):
+        tmp += [line]
+        if len(tmp) > 3:
+            digit, timestamp = tmp[-2:]
+            if digit.strip().isdigit() and '-->' in timestamp:
+                lines_indexed += [tmp[:-2]]
+                tmp = tmp[-2:]
+    return lines_indexed
+
+def filter_lemma(text):
+    return ''.join([c for c in text if c not in 'abcdefghijklmnopqrstuvwxyz-'])
+
+Sub = namedtuple('SubtitleLineInfo', ('index', 'time', 'line', 'word', 'lemma', 'kana'))
+
+def get_word_tuples(path):
+    """
+        Returns a list of namedtuples ('index', 'time', 'line', 'word', 'lemma', 'kana')
+        for each index in the subtitle file
+    """
+    lines_indexed = chunk_sub_idx_to_list(file_to_line_list(path))
+    
+    word_tuples = []
+    for idx in lines_indexed:
+        if len(idx) <= 2:
+            continue
+
+        line_idx, timestamp = idx[:2]
+        for line in idx[2:]:
+            for word in tagger(line):
+                if word.is_unk:
+                    continue
+
+                sub = Sub(line_idx, timestamp, line.strip(), word.surface, filter_lemma(word.feature.lemma), word.feature.kana)    
+                word_tuples += [sub]    
+    return word_tuples
+
+def get_word_counts(word_tuples, ignore_list, match_list, skip_match=False, min_word_cnt=None):
+    
+    # Filter out ignore list words
+    filtered = [w for w in word_tuples if w.word not in ['　', ' '] and w.word not in ignore_list and w.lemma not in ignore_list and not w.word.isdigit()]
+    if not skip_match:
+        filtered = [w for w in filtered if w.word in match_list or w.lemma in match_list]
+
+    word_counts = Counter([(w.word, w.lemma) for w in filtered])
+    
+    # if min_word_cnt is used only keeps words where count > n 
+    if min_word_cnt != None and min_word_cnt >= 0:
+        for k, v in list(word_counts.items()):
+            if v <= min_word_cnt:
+                del word_counts[k]
+                
+    return word_counts
+
+def get_word_counts2(sub_file, ignore_list, match_list, example_dict=None, include_kana=True, skip_match=False, min_word_cnt=None):
     all_words = []
     for line in file_to_line_list(sub_file):
         # Skip timestamp & index lines
@@ -112,29 +179,33 @@ def get_word_counts(sub_file, ignore_list, match_list, example_dict=None, includ
                 
     return word_counts
     
-def build_deck_cards(word_counts, example_dict, deck, template, n_most_common, max_lines=100, min_word_cnt=None):
+def build_deck_cards(word_counts, word_tuples, deck, template, n_most_common, furigana=True, include_stem=True, max_lines=100, min_word_cnt=None):
     words_added = []
     skipped = []
-    for word, _ in word_counts.most_common():
-        word_no_kana = word.split()[0] # Ignore kana. Get just 俺 instead of 俺 (オレ)
+    for (word, lemma), _ in word_counts.most_common():
+        kana = Counter([w.kana for w in word_tuples if (w.word, w.lemma) == (word, lemma)]).most_common()[0][0]
+        search = lemma if lemma != None and lemma != '' else word
 
         unk_word = False
         try:
-            answers = jisho.search(quote(word_no_kana))
+            answers = jisho.search(quote(search))
             if type(answers) != list:
                 unk_word = True
             else:
-                words_added += [word_no_kana]
+                words_added += [word]
         except:
             unk_word = True            
 
         if unk_word:
-            skipped += [word_no_kana]
+            skipped += [search]
             print(f'Could not find definition for {word}. Skipping...')
             continue
 
+        question = f'{word}[{kana}]'
+        stem = 'Stem: '+lemma if include_stem and lemma != word else ''
+            
         # Add Question & Answer to card
-        card = genanki.Note(model=template, fields=[word, parse_answer(answers), parse_example(word, example_dict)])
+        card = genanki.Note(model=template, fields=[question, stem, parse_answer(answers), parse_example(word, lemma, word_tuples)])
         deck.add_note(card)
 
         if min_word_cnt == None and len(words_added) >= n_most_common:
@@ -172,17 +243,19 @@ def parse_answer(answers, max_lines=100):
             break
     return answer_str
 
-def parse_example(word, examples_dict):
-    example_list = examples_dict.get(word)
-    if example_list == None:
+def parse_example(word, lemma, word_tuples, max_lines=20):
+    example_list = set([w.line for w in word_tuples if (w.word, w.lemma) == (word, lemma)])
+    if example_list == None or len(example_list) == 0:
         return ''
 
     example_str = 'Examples: <br>'
     example_str += '<ul>'
-    for example in example_list:
+    for i, example in enumerate(example_list):
         example_str += '<li>'
         example_str += example
         example_str += '</li>'
+        if i > max_lines:
+            break
     example_str += '</ul>'
 
     return example_str

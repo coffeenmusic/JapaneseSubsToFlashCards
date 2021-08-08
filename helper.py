@@ -20,26 +20,34 @@ deck_style = """
      color: black;
      background-color: white;
     }
+    .stem {
+     font-size: 32px;
+     text-align: center;
+    }
     .question {
      font-size: 64px;
      text-align: center;
     }
     """
     
-def init_anki_deck(deck_name):
+def init_anki_deck(deck_name, furigana=True):
+    furigana = 'furigana' if furigana else 'kanji'
+    qfmt = '<p class="question">{{'+furigana+':Question}}</p><p class="stem">{{Stem}}</p>'
+    
     model_id = random.randrange(1 << 30, 1 << 31)
     template = genanki.Model(
       model_id,
       'SubJapFlash_Model',
       fields=[
         {'name': 'Question'},
+        {'name': 'Stem'},
         {'name': 'Answer'},
         {'name': 'Examples'}, 
       ],
       templates=[
         {
-          'name': 'Card 1',
-          'qfmt': '<p class="question">{{Question}}</p>',
+          'name': 'SubJapFlash',
+          'qfmt': qfmt,
           'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}<hr id="examples">{{Examples}}',
         },
       ],

@@ -84,6 +84,9 @@ def get_word_counts(sub_file, ignore_list, match_list, example_dict=None, includ
             continue
                 
         for word in tagger(line):
+            if word.is_unk:
+                continue
+            
             kana_str = ''
             if include_kana and word.feature.kana:
                 kana_str = ' ('+word.feature.kana+')'

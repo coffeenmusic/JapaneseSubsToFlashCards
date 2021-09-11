@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser(description='Convert a japanese subtitle file t
 parser.add_argument('-s', '--sub', type=str, help='Subtitle path. If arg not used, will process all files in Subtitles dir')
 parser.add_argument('-t', '--top', type=int, help='Get the top n most common words. Default 10.')
 parser.add_argument('-n', '--no_furigana', action='store_true', help='Remove furigana from anki cards question')
-parser.add_argument('-l', '--max_lines', type=int, help='Maximum number of lines to add to Anki cards answer. Default 10')
+parser.add_argument('-l', '--max_lines', type=int, help='Maximum number of lines to add to Anki cards answer. Default 100')
 parser.add_argument('-i', '--ignore', action='store_true', help='Exports any added words to the ignore list')
 parser.add_argument('-m', '--merge', action='store_true', help='Create one merged deck for all files in Subtitles dir')
 parser.add_argument('-skip', '--skip_match', action='store_true', help='Dont filter out words in MATCH_LIST dir')
@@ -39,7 +39,7 @@ process_all = args.sub == None
 if process_all:
     sub_files = [os.path.join(SUB_DIR, f) for f in os.listdir(SUB_DIR) if f.endswith('|'.join(valid_extensions))]
     if args.merge:
-        merged_deck_name = merge_matching_strings([ntpath.basename(f).split('.')[0] for f in sub_files])
+        merged_deck_name = merge_matching_strings([ntpath.basename(f).split('.')[0] for f in sub_files]).strip(' _')
 else:
     sub_files = [args.sub]
 sub_files = sorted(sub_files)
@@ -64,25 +64,29 @@ for sub_idx, sub_file in enumerate(sub_files):
         word_tuples = get_word_tuples(sub_file)
     else:
         word_tuples += get_word_tuples(sub_file)
+    
+    # If merge, accumulate word list for all subtitles before building deck
+    # If not merge, build deck for each file
+    if args.merge and sub_idx != len(sub_files) - 1:
+        continue
+        
     word_counts = get_word_counts(word_tuples, ignore, match, skip_match=args.skip_match, min_word_cnt=args.count)
 
     """
     Part 2: Get definitions & export to Anki Deck --------------
     """
     
-    #Process each iteration in to a separate deck unless merge is True, then only create deck on first pass
-    if sub_idx == 0 or not args.merge: 
-        deck, template = init_anki_deck(deck_name)
+    # Initialize Anki Deck
+    deck, template = init_anki_deck(deck_name)
 
     # Iterate most common words, get definition from jisho.org, add to anki card
     deck, words_added, skipped = build_deck_cards(word_counts, word_tuples, deck, template, n_most_common, furigana=not(args.no_furigana), max_lines=max_lines, min_word_cnt=args.count)
 
     # Export anki deck
-    if not args.merge or sub_idx == len(sub_files)-1:
-        genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{len(words_added)}.apkg')
-    
+    genanki.Package(deck).write_to_file(f'{os.path.join(DECK_DIR, deck_name)}_Top{len(words_added)}.apkg')
+
     # Export List
-    with open(os.path.join(DECK_DIR, deck_name+'.list'), 'w', encoding="utf-8") as file:
+    with open(os.path.join(DECK_DIR, f'{deck_name}_Top{len(words_added)}.list'), 'w', encoding="utf-8") as file:
         file.writelines([w + '\n' for w in words_added])
 
     """

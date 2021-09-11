@@ -244,7 +244,7 @@ def parse_answer(answers, max_lines=100):
     return answer_str
 
 def parse_example(word, lemma, word_tuples, max_lines=20):
-    example_list = set([w.line for w in word_tuples if (w.word, w.lemma) == (word, lemma)])
+    example_list = set([w.line for w in word_tuples if (w.word, w.lemma) == (word, lemma) and w.line != word and w.line != lemma])
     if example_list == None or len(example_list) == 0:
         return ''
 

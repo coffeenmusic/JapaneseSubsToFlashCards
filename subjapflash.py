@@ -15,14 +15,7 @@ import ntpath
 pd.set_option('mode.chained_assignment', None)
 
 # defaults
-N_MOST_COMMON_WORDS = 10 # Top n most common words
-MAX_ANSWER_LINE_COUNT = 100 # Number of lines allowed on Anki card's answer
-DEFAULT_DECK_NAME = 'exported.apkg'
-SUB_DIR = 'Subtitles'
-DECK_DIR = 'Anki_Decks'
-IGNORE_DIR = 'Ignore_Lists'
 MATCH_DIR = 'Match_Lists'
-valid_extensions = ['.srt']
 
 class SubJapFlash():
     deck_style = """
@@ -41,18 +34,17 @@ class SubJapFlash():
      text-align: center;
     }
     """
+    VALID_EXTENSIONS = ['.srt']
     IGNORE_FILE_NAME = 'previous_export_words.txt'
     _cols = ['file','line_idx','word','lemma','kana','time','line']
     _not_alpha = '｡,(,),～,♪,？,》,《,:,00,-->,\u3000,。,！,　,（,）,→,…,…｡,?,]（,[,],➡,･,・,．,!,ー,]（,Ｔ,Ｂ +,Ｂ,Ｃ,―],:,：,＜,→,/,＞'.split(',')  
     
-    def __init__(self, sub_dir='Subtitles', ignore_dir='Ignore_Lists', top=10, filter_ignore=True, filter_match=True):
+    def __init__(self, sub_dir='Subtitles', ignore_dir='Ignore_Lists', filter_ignore=True, filter_match=True):
         """
         Parameters
         ----------
         sub_dir : str
             path of directory containing one or multiple subtitle files
-        top : int
-            take the top n words from subtitles
         filter_ignore : bool
             remove any words in the ignore lists from the ignore directory
         """
@@ -61,7 +53,7 @@ class SubJapFlash():
             
         self.sub_dir = sub_dir
         self.ignore_dir = ignore_dir
-        self.sub_files = sorted([os.path.join(sub_dir, f) for f in os.listdir(sub_dir) if f.endswith('|'.join(valid_extensions))])
+        self.sub_files = sorted([os.path.join(sub_dir, f) for f in os.listdir(sub_dir) if f.endswith('|'.join(self.VALID_EXTENSIONS))])
         self.ignore_files = sorted([os.path.join(ignore_dir, f) for f in os.listdir(ignore_dir) if f.endswith('.txt')])
         self._tagger = Tagger()
         
@@ -261,7 +253,7 @@ class SubJapFlash():
     def _import_match_list(self):
         match = []
         for match_file in [f for f in os.listdir(MATCH_DIR) if f.endswith('.txt')]:
-            for line in file_to_line_list(os.path.join(MATCH_DIR, match_file)):
+            for line in self._file_to_line_list(os.path.join(MATCH_DIR, match_file)):
                 for word in line.replace(',', '\n').split('\n'):
                     for token in self._tagger(word):
                         match += [token.surface]
@@ -293,7 +285,7 @@ class SubJapFlash():
                     if word.surface in self._not_alpha or word.feature.lemma in self._not_alpha or word.is_unk:
                         continue
 
-                    data += [(path, line_idx, word.surface, filter_lemma(word.feature.lemma), word.feature.kana, timestamp, line.strip())]  
+                    data += [(path, line_idx, word.surface, self.__filter_lemma(word.feature.lemma), word.feature.kana, timestamp, line.strip())]  
     
         return pd.DataFrame(data, columns=self._cols)
         
@@ -319,6 +311,9 @@ class SubJapFlash():
         # Convert to int dtype
         self.dataset.loc[:, ['total_cnts', 'file_cnts']] = self.dataset.loc[:, ['total_cnts', 'file_cnts']].astype(int)
         self.dataset = self.dataset.drop(columns=['word_lemma'])
+        
+    def __filter_lemma(self, text):
+        return ''.join([c for c in text if c not in 'abcdefghijklmnopqrstuvwxyz-'])
     
     def __chunk_sub_idx_to_list(self, sub_line_list):
         """
@@ -391,11 +386,11 @@ class SubJapFlash():
         return len(self.sub_files)
 
 
-def dir_text_to_line_list(directory, ext='.txt'):
-    line_list = []
-    for dir_file in [f for f in os.listdir(directory) if f.endswith(ext)]:
-        line_list += file_to_line_list(os.path.join(directory, dir_file))
-    return line_list
+#def dir_text_to_line_list(directory, ext='.txt'):
+#    line_list = []
+#    for dir_file in [f for f in os.listdir(directory) if f.endswith(ext)]:
+#        line_list += self._file_to_line_list(os.path.join(directory, dir_file))
+#    return line_list
 
 
  

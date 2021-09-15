@@ -3,7 +3,8 @@ from fugashi import Tagger
 
 import genanki
 import jisho
-from urllib.parse import quote  
+from urllib.parse import quote 
+from moviepy.editor import VideoFileClip
 
 import pandas as pd
 import argparse
@@ -66,6 +67,7 @@ class SubJapFlash():
             
         self._get_word_counts()
         
+        
     def filter_ignore(self, ignore=None):
         self._import_ignore_lists()
         if ignore and type(ignore) == list:
@@ -83,7 +85,9 @@ class SubJapFlash():
         self.dataset = df.loc[(df.word.isin(self.match)) | (df.lemma.isin(self.match))].reset_index(drop=True)
         
     def build_deck(self, n_most_common, deck_name=None, furigana=True, per_file=False, max_example_lines=100, min_word_cnt=None):
-        sub_name_list = [os.path.basename(f).split('.')[0] for f in set(self.dataset.file)]
+        #sub_name_list = [os.path.basename(f).split('.')[0] for f in set(self.dataset.file)]
+        sub_name_list = [os.path.splitext(os.path.basename(f))[0] for f in set(self.dataset.file)]
+        
         self.deck_name = deck_name if deck_name else self.__merge_matching_strings(sub_name_list)
         
         self.__init_anki_deck(self.deck_name, furigana)
@@ -101,11 +105,64 @@ class SubJapFlash():
         # Export List
         if export_list:
             with open(os.path.join(export_dir, f'{deck_name}_Top{len(self.words_added)}.list'), 'w', encoding="utf-8") as file:
-                file.writelines([w + '\n' for w in self.words_added])
+                file.writelines([w + '\n' for w, _ in self.words_added])
         
         # Add skipped words to ignore list, optionally add new words to ignore list
         self._update_ignore_files(new=words_to_ignore_list)
+        
+    def export_clips_from_video(self, word_lemma_tuple_list, files=None, vid_dir='Videos', save_ext='.mp4'):
+        """
+            files : list
+                list of subtitle file paths that should be searched for video clips. 
+                If none, use all videos in the default video director that have matching filenames (excluding the extension)
+        """
+        assert os.path.exists(vid_dir), 'Video directory does not exist.'
+        files = files if files else self.sub_files
+        
+        vid_files = os.listdir('Videos')
+        vid_dict = {}
+        for f in files:
+            file_basename = os.path.splitext(os.path.basename(f))[0]
+            for v in vid_files:
+                video_basename = os.path.splitext(os.path.basename(v))[0]
+                if file_basename == video_basename:
+                    vid_dict[f] = v
+        
+        df = self.dataset.copy()
+        times = {}
+        for sub_file, video_file in vid_dict.items():
+            video_basename, ext = os.path.splitext(os.path.basename(v))
+            print(video_basename, ext)
+            
+            for w, l in word_lemma_tuple_list:
+                video = VideoFileClip(os.path.join(vid_dir, video_file))
+                word_lemma = w+'_'+l
+                if not os.path.exists(word_lemma):
+                    os.mkdir(os.path.join(vid_dir, word_lemma))
                 
+                filt = df.loc[(df.word == w) & (df.lemma == l) & (df.file == sub_file)]
+                time_strs = filt.time.values
+                seconds = [self._srt_time_to_seconds(t) for t in time_strs]
+                for i, (start, stop) in enumerate(seconds):
+                    os
+                    save_path = os.path.join(vid_dir, os.path.join(word_lemma, video_basename+'_'+word_lemma+'_'+str(i)+save_ext))
+                    print(save_path)
+                    video.subclip(start, stop).write_videofile(save_path)
+                
+     
+    
+    def _srt_time_to_seconds(self, time_line):
+        def timestr_to_sec(time_str):
+            h, m, s_str = time_str.split(':')
+            s, ms = s_str.split(',')
+            return int(h)*60*60 + int(m)*60 + int(s) + int(ms)/1000 
+        
+        start_time_str, stop_time_str = time_line.split(' --> ')
+        start_time = timestr_to_sec(start_time_str)
+        stop_time = timestr_to_sec(stop_time_str)
+        
+        return start_time, stop_time
+            
     def _update_ignore_files(self, new=False, skipped=True):
         new_ignore_words = []
         if new:
@@ -124,7 +181,7 @@ class SubJapFlash():
 
         # Export new text
         with open(ignore_file, 'w', encoding="utf-8") as file:
-            file.writelines([w + '\n' for w in new_ignore_words])
+            file.writelines([w +', '+l+'\n' for w, l in new_ignore_words])
         
     def _add_cards(self, n_most_common, furigana=True, include_stem=True, max_lines=100, min_word_cnt=None, per_file=False, common_only=True):
         """
@@ -157,12 +214,13 @@ class SubJapFlash():
                     if type(answers) != list:
                         unk_word = True
                     else:
-                        words_added += [word]
+                        words_added += [(word, lemma)]
                 except:
                     unk_word = True            
 
                 if unk_word:
-                    skipped += [search]
+                    #skipped += [search]
+                    skipped += [(word, lemma)]
                     print(f'Could not find definition for {word}. Skipping...')
                     continue
 
